@@ -5,6 +5,7 @@ This directory contains the Move smart contracts for the Trade.apt DeFi trading 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Deployed Contract](#deployed-contract)
 - [Contract Architecture](#contract-architecture)
 - [Contracts](#contracts)
 - [Getting Started](#getting-started)
@@ -15,12 +16,15 @@ This directory contains the Move smart contracts for the Trade.apt DeFi trading 
 
 ## Overview
 
-Trade.apt uses three core smart contracts to handle:
-- **Trade Recording**: Immutable ledger of all trades
-- **Price Alerts**: User-defined price monitoring
-- **Portfolio Tracking**: Real-time portfolio management
+Trade.apt provides a complete DeFi trading experience with:
+- **Conditional Orders**: Limit orders with price-based conditions
+- **Price Alerts**: User-defined price monitoring and notifications
+- **DEX Integration**: Swap router for token exchanges
+- **Portfolio Tracking**: Real-time trade and volume tracking
 
-These contracts work together with the FastAPI backend to provide a complete DeFi trading experience on Aptos.
+## Deployed Contract
+
+**Mainnet Address**: `0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea`
 
 ## Contract Architecture
 
@@ -33,135 +37,130 @@ These contracts work together with the FastAPI backend to provide a complete DeF
 │    Backend (FastAPI)                     │
 │  - AI Parsing                            │
 │  - Price Fetching                        │
-│  - Trade Simulation                      │
+│  - Trade Execution                       │
 └──────────────┬──────────────────────────┘
                │
 ┌──────────────▼──────────────────────────┐
 │    Aptos Blockchain Contracts            │
-│  ├─ TradeRegistry                        │
-│  ├─ PriceAlert                           │
-│  └─ UserPortfolio                        │
+│  ├─ trade_apt (Main Trading Logic)       │
+│  ├─ price_oracle (Price Feeds)           │
+│  ├─ swap_router (DEX Integration)        │
+│  └─ events (Event Definitions)           │
 └──────────────────────────────────────────┘
 ```
 
 ## Contracts
 
-### 1. TradeRegistry
+### 1. Trade.apt (Main Module)
 
-**Purpose**: Immutable record of all executed trades
+**Purpose**: Core trading logic with conditional orders, swaps, and alerts
 
-**Location**: `sources/trade_registry.move`
-
-**Key Structs**:
-```move
-struct Trade {
-    trade_id: u64,
-    user: address,
-    action: u8,              // 0=buy, 1=sell, 2=swap
-    token_from: String,
-    token_to: String,
-    amount_usd: u64,
-    executed_price: u64,
-    tokens_received: u64,
-    timestamp: u64,
-}
-```
-
-**Entry Functions**:
-- `record_buy_trade()` - Log a buy transaction
-- `record_sell_trade()` - Log a sell transaction
-- `record_swap_trade()` - Log a token swap
-
-**View Functions**:
-- `get_trade_count()` - Total trades recorded
-- `get_user_trades(user)` - All trades by user
-- `get_trade(trade_id)` - Specific trade details
-
-**Use Cases**:
-- Audit trail for all trades
-- User trade history
-- Performance analytics
-- Tax reporting
-
----
-
-### 2. PriceAlert
-
-**Purpose**: Manage user price monitoring and alerts
-
-**Location**: `sources/price_alert.move`
+**Location**: `sources/trade_apt.move`
 
 **Key Structs**:
 ```move
-struct Alert {
-    alert_id: u64,
-    user: address,
-    token: String,
-    operator: u8,            // 0=<, 1=>, 2==
+struct ConditionalOrder {
+    order_id: u64,
+    owner: address,
+    token_in: String,
+    token_out: String,
+    amount_in: u64,
+    min_amount_out: u64,
+    condition_type: u8,      // 1=above, 2=below, 3=immediate
     target_price: u64,
-    message: String,
-    is_active: bool,
+    status: u8,              // 1=pending, 2=executed, 3=cancelled, 4=expired
     created_at: u64,
+    expires_at: u64,
+}
+
+struct PriceAlert {
+    alert_id: u64,
+    owner: address,
+    token: String,
+    condition_type: u8,
+    target_price: u64,
+    is_active: bool,
 }
 ```
 
 **Entry Functions**:
-- `create_alert_lt(token, price, message)` - Alert when price falls below
-- `create_alert_gt(token, price, message)` - Alert when price rises above
-- `create_alert_eq(token, price, message)` - Alert at exact price
-- `deactivate_alert(alert_id)` - Turn off alert
+- `initialize()` - Initialize the protocol (admin only)
+- `init_user_account()` - Create user trading account
+- `execute_swap<TokenIn, TokenOut>()` - Execute immediate swap
+- `create_conditional_order()` - Create limit/conditional order
+- `cancel_order()` - Cancel a pending order
+- `execute_conditional_order()` - Execute order when conditions met
+- `create_alert()` - Create price alert
+- `trigger_alert()` - Trigger alert when conditions met
+- `cancel_alert()` - Cancel an alert
 
 **View Functions**:
-- `get_alert_count()` - Total alerts in system
-- `get_user_active_alerts(user)` - User's active alerts
-- `get_alert(alert_id)` - Alert details
-- `should_alert_trigger(alert_id, price)` - Check trigger condition
-
-**Use Cases**:
-- Price monitoring
-- Automated notifications
-- Trade trigger conditions
-- Portfolio watch lists
+- `get_user_stats(address)` - User's trade count, volume, creation time
+- `get_protocol_stats()` - Total trades, volume, orders created
+- `get_pending_orders_count()` - Number of pending orders
 
 ---
 
-### 3. UserPortfolio
+### 2. Price Oracle
 
-**Purpose**: Track user token positions and portfolio composition
+**Purpose**: Price feed integration with Pyth Network support
 
-**Location**: `sources/user_portfolio.move`
+**Location**: `sources/price_oracle.move`
 
-**Key Structs**:
-```move
-struct TokenPosition {
-    token: String,
-    amount: u64,
-    average_entry_price: u64,
-    total_value_usd: u64,
-}
-
-struct Portfolio {
-    user: address,
-    total_value_usd: u64,
-    positions: vector<TokenPosition>,
-}
-```
+**Key Features**:
+- Cached price data with staleness checks
+- Keeper-based price updates
+- Batch price updates support
 
 **Entry Functions**:
-- `initialize_portfolio()` - Create portfolio for user
-- `update_position(token, amount, price)` - Add or modify holding
-- `remove_position(token)` - Remove token from portfolio
+- `initialize()` - Initialize oracle configuration
+- `add_keeper()` - Add authorized price updater
+- `update_price()` - Update single token price
+- `batch_update_prices()` - Update multiple prices
 
 **View Functions**:
-- `get_portfolio(user)` - Full portfolio snapshot
-- `get_position(user, token)` - Single token position
-- `get_portfolio_value(user)` - Total USD value
+- `get_price(oracle_addr, token)` - Get current price
+- `is_price_fresh(oracle_addr, token)` - Check price staleness
+- `get_price_safe(oracle_addr, token)` - Get price with freshness flag
 
-**Use Cases**:
-- Portfolio composition tracking
-- Average cost basis tracking
-- Position management
-- Portfolio valuation
+---
+
+### 3. Swap Router
+
+**Purpose**: DEX integration for token swaps
+
+**Location**: `sources/swap_router.move`
+
+**Key Features**:
+- Exact input swaps
+- Exact output swaps
+- Multi-hop swaps
+- Price impact calculation
+
+**Entry Functions**:
+- `swap_exact_input<CoinIn, CoinOut>()` - Swap exact amount in
+- `swap_exact_output<CoinIn, CoinOut>()` - Swap for exact amount out
+- `swap_multi_hop<CoinIn, CoinMid, CoinOut>()` - Multi-hop swap
+
+**View Functions**:
+- `get_amount_out(amount_in)` - Expected output amount
+- `get_amount_in(amount_out)` - Required input amount
+- `get_price_impact(amount_in)` - Price impact in basis points
+
+---
+
+### 4. Events
+
+**Purpose**: Centralized event definitions for cross-module use
+
+**Location**: `sources/events.move`
+
+**Event Types**:
+- Protocol events (initialized, paused, unpaused)
+- User events (registered, settings updated)
+- Trading events (market orders, limit orders, stop loss, take profit)
+- Alert events (created, triggered, deleted)
+- Portfolio events (deposit, withdraw, rebalance)
 
 ---
 
@@ -169,19 +168,8 @@ struct Portfolio {
 
 ### Prerequisites
 
-- **Move SDK**: Install from https://aptos.dev/en/build/setup-cli
+- **Aptos CLI**: Install from https://aptos.dev/en/build/setup-cli
 - **Node.js**: v16+ (for scripts)
-- **Aptos CLI**: Latest version
-
-### Installation
-
-```bash
-# Navigate to contract directory
-cd my-aptos-dapp/contract
-
-# Install dependencies (if needed)
-# Aptos framework is automatically fetched from Move.toml
-```
 
 ### Project Structure
 
@@ -189,14 +177,13 @@ cd my-aptos-dapp/contract
 contract/
 ├── Move.toml              # Package manifest
 ├── README.md              # This file
-├── CONTRACTS.md           # Detailed contract documentation
 ├── sources/
-│   ├── message_board.move
-│   ├── trade_registry.move
-│   ├── price_alert.move
-│   └── user_portfolio.move
+│   ├── trade_apt.move     # Main trading logic
+│   ├── price_oracle.move  # Price feed integration
+│   ├── swap_router.move   # DEX swap router
+│   └── events.move        # Event definitions
 └── tests/
-    └── test_end_to_end.move
+    └── trade_apt_tests.move  # Unit tests
 ```
 
 ## Building & Testing
@@ -207,11 +194,8 @@ contract/
 # Compile all contracts
 aptos move compile
 
-# Compile with verbose output
-aptos move compile --verbose
-
-# Compile specific contract
-aptos move compile --package trade_registry_addr
+# Or use npm script
+npm run move:compile
 ```
 
 ### Run Tests
@@ -220,21 +204,11 @@ aptos move compile --package trade_registry_addr
 # Run all tests
 aptos move test
 
-# Run specific test
-aptos move test --filter test_trade_registry
+# Or use npm script
+npm run move:test
 
 # Run with verbose output
 aptos move test --verbose
-
-# Generate coverage report
-aptos move test --coverage
-```
-
-### Linting
-
-```bash
-# Check for style issues
-aptos move lint
 ```
 
 ## Deployment
@@ -248,8 +222,8 @@ aptos init --profile testnet --network testnet
 # Publish contracts to testnet
 aptos move publish --profile testnet
 
-# View transaction result
-# Copy the transaction hash and check on Explorer
+# Or use npm script
+npm run move:publish
 ```
 
 ### Mainnet Deployment
@@ -262,21 +236,14 @@ aptos init --profile mainnet --network mainnet
 aptos move publish --profile mainnet
 ```
 
-### Upgrade Existing Contracts
-
-```bash
-# Use upgrade capability (if enabled)
-aptos move publish --profile testnet --assume-yes
-```
-
 ## Usage Examples
 
-### Example 1: Record a Trade
+### Example 1: Create a Conditional Order
 
 ```bash
 aptos move run \
-  --function-id 'trade_registry_addr::trade_registry::record_buy_trade' \
-  --args 'string:"USDC"' 'string:"APT"' '100' '8' '12' \
+  --function-id 'trade_apt::trade_apt::create_conditional_order' \
+  --args 'string:"USDC"' 'string:"APT"' '20000000' '2000000' '2' '700000000' '86400' \
   --profile testnet
 ```
 
@@ -284,25 +251,25 @@ aptos move run \
 
 ```bash
 aptos move run \
-  --function-id 'price_alert_addr::price_alert::create_alert_lt' \
-  --args 'string:"APT"' '7' 'string:"APT dropped below $7!"' \
+  --function-id 'trade_apt::trade_apt::create_alert' \
+  --args 'string:"APT"' '2' '700000000' \
   --profile testnet
 ```
 
-### Example 3: Initialize Portfolio
-
-```bash
-aptos move run \
-  --function-id 'user_portfolio_addr::user_portfolio::initialize_portfolio' \
-  --profile testnet
-```
-
-### Example 4: Query Trade History
+### Example 3: Query User Stats
 
 ```bash
 aptos move view \
-  --function-id 'trade_registry_addr::trade_registry::get_user_trades' \
+  --function-id 'trade_apt::trade_apt::get_user_stats' \
   --args '<user_address>' \
+  --profile testnet
+```
+
+### Example 4: Get Protocol Stats
+
+```bash
+aptos move view \
+  --function-id 'trade_apt::trade_apt::get_protocol_stats' \
   --profile testnet
 ```
 
@@ -310,176 +277,52 @@ aptos move view \
 
 ### With Backend (FastAPI)
 
-The contracts integrate with the FastAPI backend as follows:
-
-**Trade Recording Flow:**
+**Trade Flow:**
 ```
-User Input → Backend Parsing → Trade Execution → Record to TradeRegistry
+User Input → AI Parsing → Validate Conditions → Create Order → Execute when Met
 ```
 
-**Alert Management Flow:**
+**Alert Flow:**
 ```
-User Creates Alert → Store in PriceAlert → Backend Monitors → Execute when Triggered
-```
-
-**Portfolio Tracking Flow:**
-```
-Trade Executed → Update UserPortfolio → Query Portfolio Value
+User Creates Alert → Store On-chain → Backend Monitors → Trigger when Conditions Met
 ```
 
-### JavaScript Integration
+### Error Codes
 
-Use these scripts in `../../scripts/move/` to interact with contracts:
+**trade_apt:**
+- `1` - Not initialized
+- `2` - Already initialized
+- `3` - Insufficient balance
+- `4` - Invalid amount
+- `5` - Order not found
+- `6` - Unauthorized
+- `7` - Invalid condition
+- `8` - Order expired
+- `9` - Slippage exceeded
 
-```javascript
-// Example: Get user trades
-import { getAptosClient } from '../utils/aptosClient';
+**price_oracle:**
+- `1` - Price stale
+- `2` - Invalid price
+- `3` - Unauthorized
+- `4` - Feed not found
 
-const client = getAptosClient();
-const trades = await client.getResource(
-  userAddress,
-  '0x..::trade_registry::Trade'
-);
-```
-
-### TypeScript Types
-
-Reference types in `../../src/utils/` for contract structures:
-- `trade_registry_abi.ts` - Trade types
-- `message_board_abi.ts` - Message types (adapt for alerts/portfolio)
-
-## Configuration
-
-### Module Addresses
-
-Edit `Move.toml` to set actual addresses after deployment:
-
-```toml
-[addresses]
-message_board_addr = "0x..."
-trade_registry_addr = "0x..."
-price_alert_addr = "0x..."
-user_portfolio_addr = "0x..."
-```
-
-### Gas Settings
-
-Adjust in `.aptos/config.yaml`:
-
-```yaml
-gas_unit_price: 100
-max_gas: 100000
-```
-
-## Error Handling
-
-Each contract defines specific error codes:
-
-**TradeRegistry:**
-- `1` - Registry not initialized
-- `2` - Invalid action type
-
-**PriceAlert:**
-- `1` - Alert not found
-- `2` - Invalid operator
-- `3` - Alert inactive
-
-**UserPortfolio:**
-- `1` - Portfolio not found
-- `2` - Position not found
-- `3` - Invalid amount
-
-### Handling Errors in Code
-
-```move
-assert!(amount > 0, ERR_INVALID_AMOUNT);
-// Aborts with error code 3
-```
-
-## Monitoring & Debugging
-
-### View Transactions
-
-```bash
-aptos account list-transactions --account <address> --profile testnet
-```
-
-### Get Transaction Details
-
-```bash
-aptos transaction get-tx --txn-hash <hash> --profile testnet
-```
-
-### View Contract Resources
-
-```bash
-aptos account resource --account <address> --resource-type '<contract>::<module>::<struct>'
-```
-
-## Performance Considerations
-
-- **Trade Recording**: O(1) append operation
-- **Portfolio Updates**: O(n) where n = number of positions
-- **Alert Queries**: O(m) where m = number of alerts
-
-For production use with many users, consider:
-- Sharding trades by date
-- Batch alert processing
-- Off-chain indexing
-
-## Security Notes
-
-### Current Limitations
-
-- ✅ Immutable trade records
-- ⚠️ Centralized alert management (no Oracle)
-- ⚠️ Manual portfolio updates (no auto-execution)
-- ⚠️ No token transfers (simulation mode)
-
-### Future Security Enhancements
-
-- Oracle-based price feeds for automated triggers
-- Multi-sig authorization for critical functions
-- Rate limiting for portfolio updates
-- Emergency pause mechanism
-
-## FAQ
-
-**Q: Do these contracts execute real trades?**
-A: No, this is a simulation system. Trade execution happens in the backend. Contracts only record and track simulated trades.
-
-**Q: Can I modify contract state after deployment?**
-A: No, Move contracts are immutable. Update requires publishing a new version.
-
-**Q: What fees do I need?**
-A: Gas fees for transactions (typically <$0.01 on Aptos testnet).
-
-**Q: How do I reset my portfolio?**
-A: Remove all positions and reinitialize. No built-in reset function by design.
-
-**Q: Can I use these contracts on different networks?**
-A: Yes, after redeployment to each network with new addresses.
+**swap_router:**
+- `1` - Insufficient output
+- `2` - Invalid path
+- `3` - Deadline exceeded
+- `4` - Zero amount
 
 ## Resources
 
 - [Aptos Documentation](https://aptos.dev/)
 - [Move Book](https://move-language.github.io/move/)
 - [Aptos Explorer](https://explorer.aptoslabs.com/)
-- [Move by Example](https://move-by-example.com/)
-
-## Support
-
-For issues or questions:
-1. Check `CONTRACTS.md` for detailed contract documentation
-2. Review error codes section above
-3. Check Aptos documentation
-4. Open an issue on GitHub
 
 ## License
 
-MIT - See LICENSE file in project root
+MIT
 
 ---
 
-**Last Updated**: November 2024
-**Contract Version**: 1.0.0 (MVP)
+**Last Updated**: November 2025
+**Contract Version**: 2.0.0

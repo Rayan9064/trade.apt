@@ -1,19 +1,40 @@
-## Create Aptos Dapp Boilerplate Template
+## Trade.apt - DeFi Trading Assistant for Aptos
 
-The Boilerplate template provides a starter dapp with all necessary dapp infrastructure and a simple wallet info implementation, transfer APT and a simple message board functionality to send and read a message on chain.
+A full-stack DeFi trading application built on the Aptos blockchain with AI-powered trading capabilities.
 
-## Read the Boilerplate template docs
-To get started with the Boilerplate template and learn more about the template functionality and usage, head over to the [Boilerplate template docs](https://learn.aptoslabs.com/en/dapp-templates/boilerplate-template) 
+### Deployed Contract Address
+**0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea**
 
+## Features
 
-## The Boilerplate template provides:
+- 🤖 **AI-Powered Parsing**: Convert natural language trading instructions to structured JSON
+- 💰 **Real-Time Prices**: Fetch live crypto prices from price oracles
+- 📊 **Conditional Orders**: Create limit orders with price-based conditions
+- 🔔 **Price Alerts**: Set alerts that trigger when tokens reach target prices
+- 🔄 **DEX Integration**: Swap router for token exchanges
+- 📈 **Portfolio Tracking**: Track user trades and volume
 
-- **Folder structure** - A pre-made dapp folder structure with a `src` (frontend) and `contract` folders.
-- **Dapp infrastructure** - All required dependencies a dapp needs to start building on the Aptos network.
-- **Wallet Info implementation** - Pre-made `WalletInfo` components to demonstrate how one can use to read a connected Wallet info.
-- **Transfer APT implementation** - Pre-made `transfer` components to send APT to an address.
-- **Message board functionality implementation** - Pre-made `message` components to send and read a message on chain
+## Smart Contracts
 
+The project includes four Move modules:
+
+- **trade_apt.move** - Main trading module with conditional orders, swaps, and alerts
+- **price_oracle.move** - Price oracle integration with Pyth Network support
+- **swap_router.move** - DEX router for token swaps (Liquidswap/PancakeSwap integration)
+- **events.move** - Centralized event definitions for cross-module use
+
+## Project Structure
+
+```
+contract/
+├── sources/
+│   ├── trade_apt.move      # Main trading logic
+│   ├── price_oracle.move   # Price feed integration
+│   ├── swap_router.move    # DEX swap router
+│   └── events.move         # Event definitions
+└── tests/
+    └── trade_apt_tests.move  # Unit tests
+```
 
 ## What tools the template uses?
 
@@ -38,3 +59,7 @@ Some commands are built-in the template and can be ran as a npm script, for exam
 - `npm run deploy` - a command to deploy the dapp to Vercel
 
 For all other available CLI commands, can run `npx aptos` and see a list of all available commands.
+
+## License
+
+MIT
