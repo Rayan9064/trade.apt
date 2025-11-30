@@ -59,15 +59,23 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         try {
           const data = JSON.parse(event.data);
 
-          if (data.type === 'initial' && data.prices) {
+          if ((data.type === 'init' || data.type === 'initial') && data.prices) {
+            setPrices(data.prices);
+            setLastUpdate(new Date());
+          } else if (data.type === 'update' && data.prices) {
+            // Bulk update from SSE stream
             setPrices(data.prices);
             setLastUpdate(new Date());
           } else if (data.type === 'update' && data.symbol && data.price) {
+            // Single price update
             setPrices((prev: LivePrices) => ({
               ...prev,
               [data.symbol]: data.price,
             }));
             setLastUpdate(new Date());
+          } else if (data.type === 'heartbeat') {
+            // Heartbeat - just confirms connection is alive
+            setIsConnected(true);
           }
         } catch (e) {
           console.error('Failed to parse price update:', e);

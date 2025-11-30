@@ -50,7 +50,8 @@ interface DecibelContextType {
 
 const DecibelContext = createContext<DecibelContextType | null>(null);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use relative API routes for Next.js
+const API_BASE = '/api';
 
 export function DecibelProvider({ children }: { children: ReactNode }) {
   const [markets, setMarkets] = useState<DecibelMarket[]>([]);
@@ -61,10 +62,12 @@ export function DecibelProvider({ children }: { children: ReactNode }) {
 
   const fetchMarkets = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/decibel/markets`);
+      const response = await fetch(`${API_BASE}/decibel/markets`);
       if (!response.ok) throw new Error('Failed to fetch markets');
       const data = await response.json();
-      setMarkets(data.markets || []);
+      // Handle both array and object responses
+      const marketList = Array.isArray(data) ? data : (data.markets || []);
+      setMarkets(marketList);
       setError(null);
     } catch (err) {
       console.error('Error fetching Decibel markets:', err);
@@ -74,13 +77,17 @@ export function DecibelProvider({ children }: { children: ReactNode }) {
 
   const fetchPrices = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/decibel/prices`);
+      const response = await fetch(`${API_BASE}/decibel/prices`);
       if (!response.ok) throw new Error('Failed to fetch prices');
       const data = await response.json();
       
+      // Handle both array and object responses
+      const priceList = Array.isArray(data) ? data : (data.prices || []);
       const priceMap: Record<string, DecibelPrice> = {};
-      (data.prices || []).forEach((p: DecibelPrice) => {
-        priceMap[p.symbol] = p;
+      priceList.forEach((p: DecibelPrice) => {
+        if (p.symbol) {
+          priceMap[p.symbol] = p;
+        }
       });
       
       setPrices(priceMap);
@@ -99,11 +106,11 @@ export function DecibelProvider({ children }: { children: ReactNode }) {
   ): Promise<DecibelCandle[]> => {
     try {
       const response = await fetch(
-        `${API_URL}/decibel/candlesticks/${symbol}?interval=${interval}&days=${days}`
+        `${API_BASE}/decibel/candlesticks/${symbol}?interval=${interval}&days=${days}`
       );
       if (!response.ok) throw new Error(`Failed to fetch candlesticks for ${symbol}`);
       const data = await response.json();
-      return data.candles || [];
+      return data.ohlcv || data.candles || [];
     } catch (err) {
       console.error(`Error fetching candlesticks for ${symbol}:`, err);
       return [];

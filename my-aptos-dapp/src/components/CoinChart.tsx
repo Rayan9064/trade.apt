@@ -139,7 +139,6 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
 
   const stats = chartData?.stats;
   const isPositive = stats ? stats.change_percent >= 0 : true;
-  const dataSource = chartData?.source || 'unknown';
 
   const chartOptions = {
     responsive: true,
@@ -239,21 +238,12 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
   };
 
   const getSourceBadge = () => {
-    if (dataSource === 'decibel') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-          Decibel Live
-        </span>
-      );
-    } else if (dataSource === 'coingecko') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30">
-          CoinGecko
-        </span>
-      );
-    }
-    return null;
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+        Decibel Live
+      </span>
+    );
   };
 
   return (

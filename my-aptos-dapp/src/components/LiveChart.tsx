@@ -35,7 +35,8 @@ interface ChartDataResponse {
   source?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use relative API routes for Next.js
+const API_URL = '/api';
 
 export default function LiveChart({ symbol = 'BTC' }: LiveChartProps) {
   const { getPrice, getPriceChange, getFormattedPrice, isConnected } = usePrices();
@@ -283,9 +284,9 @@ export default function LiveChart({ symbol = 'BTC' }: LiveChartProps) {
       <div className="px-4 py-2 border-t border-gray-800 bg-gray-900/30 flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-2">
           <FontAwesomeIcon icon={faBolt} className="text-yellow-500" />
-          <span>Real-time prices via Binance</span>
+          <span>Real-time prices via Decibel</span>
         </div>
-        <span>Chart data: {chartData?.source || 'CoinGecko'}</span>
+        <span>Chart data: {chartData?.source || 'Decibel'}</span>
       </div>
     </div>
   );

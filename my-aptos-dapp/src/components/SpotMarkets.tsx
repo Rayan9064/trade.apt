@@ -112,7 +112,7 @@ export default function SpotMarkets({ onSelectSymbol, selectedSymbol }: SpotMark
       <div className="px-4 py-2 border-t border-gray-800 bg-gray-900/30 flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-1">
           <FontAwesomeIcon icon={faBolt} className="text-yellow-500" />
-          <span>Binance WebSocket</span>
+          <span>Decibel API</span>
         </div>
         <span>Real-time prices</span>
       </div>

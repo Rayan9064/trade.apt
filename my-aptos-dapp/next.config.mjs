@@ -7,15 +7,5 @@ const withPWA = withPWAInit({
 // Your Next config is automatically typed!
 export default withPWA({
   reactStrictMode: true,
-  // API rewrites to proxy backend requests
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL 
-          ? `${process.env.NEXT_PUBLIC_API_URL}/:path*`
-          : 'http://localhost:8000/:path*',
-      },
-    ];
-  },
+  // No more API rewrites needed - using Next.js API routes
 });
