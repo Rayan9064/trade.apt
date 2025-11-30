@@ -1,12 +1,21 @@
 import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
-  disable: false,
+  disable: process.env.NODE_ENV === 'development', // Disable PWA in development
 });
 
 // Your Next config is automatically typed!
 export default withPWA({
-  output: "export", // Outputs a Single-Page Application (SPA).
-  distDir: "./dist", // Changes the build output directory to `./dist/`.
-  basePath: process.env.NEXT_PUBLIC_BASE_PATH, // Sets the base path to `/some-base-path`.
+  reactStrictMode: true,
+  // API rewrites to proxy backend requests
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL 
+          ? `${process.env.NEXT_PUBLIC_API_URL}/:path*`
+          : 'http://localhost:8000/:path*',
+      },
+    ];
+  },
 });
