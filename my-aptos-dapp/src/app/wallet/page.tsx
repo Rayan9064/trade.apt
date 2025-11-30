@@ -12,13 +12,6 @@ interface WalletInfo {
   usd_value: number | null;
 }
 
-interface Transaction {
-  hash: string;
-  type: string;
-  amount: number;
-  timestamp: string;
-}
-
 export default function WalletPage() {
   const router = useRouter();
   const [wallet, setWallet] = useState<WalletInfo | null>(null);

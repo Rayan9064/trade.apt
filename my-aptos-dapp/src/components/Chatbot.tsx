@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRobot, faPaperPlane, faWallet, faShieldAlt, faCheckCircle, faTimesCircle, faCircle, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faRobot, faPaperPlane, faWallet, faShieldAlt, faCheckCircle, faTimesCircle, faCircle } from '@fortawesome/free-solid-svg-icons';
 import { usePrices } from '@/context/PriceContext';
 
 interface Message {
@@ -185,7 +185,7 @@ export default function Chatbot({ onOpenCharts }: ChatbotProps) {
     try {
       // In a real implementation, this would create and submit the transaction
       // The wallet popup shows EXACTLY what will happen - user has full control
-      const wallet = (window as any).aptos;
+      // const wallet = (window as any).aptos;
       
       // Example: Building an Aptos transaction (would use actual DEX contract)
       // const payload = {

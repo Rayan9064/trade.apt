@@ -24,23 +24,6 @@ const ChartPanel: React.FC<ChartPanelProps> = ({ initialTokens = [], onClose }) 
     tabs.length > 0 ? tabs[0].id : null
   );
 
-  const addTab = useCallback((symbol: string) => {
-    const upperSymbol = symbol.toUpperCase();
-    // Check if tab already exists
-    const existing = tabs.find((t) => t.symbol === upperSymbol);
-    if (existing) {
-      setActiveTabId(existing.id);
-      return;
-    }
-
-    const newTab: ChartTab = {
-      symbol: upperSymbol,
-      id: `${upperSymbol}-${Date.now()}`,
-    };
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTabId(newTab.id);
-  }, [tabs]);
-
   const removeTab = useCallback((id: string) => {
     setTabs((prev) => {
       const newTabs = prev.filter((t) => t.id !== id);

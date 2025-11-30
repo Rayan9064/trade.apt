@@ -7,7 +7,7 @@ import { faCircle, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-ic
 const TRACKED_TOKENS = ['BTC', 'ETH', 'SOL', 'APT', 'BNB', 'XRP', 'DOGE'];
 
 export default function LivePriceTicker() {
-  const { prices, isConnected, getFormattedPrice, getPriceChange } = usePrices();
+  const { isConnected, getFormattedPrice, getPriceChange } = usePrices();
 
   return (
     <div className="bg-gray-900/80 border-b border-gray-800 px-4 py-2 overflow-hidden">
