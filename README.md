@@ -2,6 +2,8 @@
 
 An AI-powered trading assistant for the Aptos blockchain with natural language commands, real-time price tracking, and automated trading strategies.
 
+![alt text](image.png)
+
 **🌐 Live Demo:** [https://trade-apt.vercel.app/](https://trade-apt.vercel.app/)
 
 **🤖 AI Backend:** [https://trade-apt.onrender.com](https://trade-apt.onrender.com)
