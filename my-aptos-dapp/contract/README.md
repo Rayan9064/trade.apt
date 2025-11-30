@@ -1,4 +1,12 @@
-# Trade.apt Smart Contracts
+# TradeAPT Smart Contracts 📜
+
+Move smart contracts powering TradeAPT's on-chain trading functionality on Aptos.
+
+**🌐 Live App:** [https://trade-apt.vercel.app/](https://trade-apt.vercel.app/)
+
+**🤖 AI Backend:** [https://trade-apt.onrender.com](https://trade-apt.onrender.com)
+
+---
 
 This directory contains the Move smart contracts for the Trade.apt DeFi trading assistant system running on the Aptos blockchain.
 

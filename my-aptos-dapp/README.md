@@ -1,11 +1,26 @@
-## Trade.apt - DeFi Trading Assistant for Aptos
+# TradeAPT Frontend 🎨
 
-A full-stack DeFi trading application built on the Aptos blockchain with AI-powered trading capabilities.
+Next.js frontend application for TradeAPT - an AI-powered trading platform on Aptos.
+
+**🌐 Live:** [https://trade-apt.vercel.app/](https://trade-apt.vercel.app/)
 
 ### Deployed Contract Address
 **0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea**
 
-## Features
+---
+
+## 📋 Overview
+
+Modern React frontend built with:
+- **Next.js 14** - App Router & Server Components
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **shadcn/ui** - Beautiful UI components
+- **Aptos Wallet Adapter** - Multi-wallet support
+
+---
+
+## ✨ Features
 
 - 🤖 **AI-Powered Parsing**: Convert natural language trading instructions to structured JSON
 - 💰 **Real-Time Prices**: Fetch live crypto prices from price oracles
@@ -45,20 +60,57 @@ contract/
 - Node based Move commands
 - [Next-pwa](https://ducanh-next-pwa.vercel.app/)
 
-## What Move commands are available?
+---
+
+## 🛠 Available Commands
 
 The tool utilizes [aptos-cli npm package](https://github.com/aptos-labs/aptos-cli) that lets us run Aptos CLI in a Node environment.
 
-Some commands are built-in the template and can be ran as a npm script, for example:
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm build` | Build for production |
+| `pnpm start` | Start production server |
+| `pnpm lint` | Run ESLint |
+| `pnpm move:publish` | Publish Move contract |
+| `pnpm move:test` | Run Move unit tests |
+| `pnpm move:compile` | Compile Move contract |
+| `pnpm move:upgrade` | Upgrade Move contract |
+| `pnpm deploy` | Deploy dapp to Vercel |
 
-- `npm run move:publish` - a command to publish the Move contract
-- `npm run move:test` - a command to run Move unit tests
-- `npm run move:compile` - a command to compile the Move contract
-- `npm run move:upgrade` - a command to upgrade the Move contract
-- `npm run dev` - a command to run the frontend locally
-- `npm run deploy` - a command to deploy the dapp to Vercel
+For all other available CLI commands, run `npx aptos` to see the full list.
 
-For all other available CLI commands, can run `npx aptos` and see a list of all available commands.
+---
+
+## 🔐 Environment Variables
+
+Create `.env.local`:
+
+```env
+# Network Configuration
+NEXT_PUBLIC_APP_NETWORK=testnet
+
+# Contract Address
+NEXT_PUBLIC_MODULE_ADDRESS=0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea
+
+# API Backend
+NEXT_PUBLIC_API_URL=https://trade-apt.onrender.com
+```
+
+---
+
+## 🚀 Deployment (Vercel)
+
+1. Import project to Vercel
+2. Set framework preset to Next.js
+3. Configure environment variables
+4. Deploy
+
+Automatic deployments on push to `main`.
+
+**Live:** [https://trade-apt.vercel.app/](https://trade-apt.vercel.app/)
+
+---
 
 ## License
 

@@ -1,8 +1,16 @@
-# Trade.apt - AI-Powered DeFi Trading Assistant
+# TradeAPT 🚀
 
-A full-stack AI-powered DeFi trading assistant for the Aptos blockchain with natural language trading, real-time price streaming, and a modern dashboard UI.
+An AI-powered trading assistant for the Aptos blockchain with natural language commands, real-time price tracking, and automated trading strategies.
 
-## Features
+**🌐 Live Demo:** [https://trade-apt.vercel.app/](https://trade-apt.vercel.app/)
+
+**🤖 AI Backend:** [https://trade-apt.onrender.com](https://trade-apt.onrender.com)
+
+**📜 Contract Address:** `0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea`
+
+---
+
+## ✨ Features
 
 ### Backend (Python/FastAPI)
 - 🤖 **AI Trading Agent**: Natural language trading powered by Groq (llama-3.3-70b) or OpenAI GPT-4o-mini
@@ -386,6 +394,29 @@ The server starts a background worker that:
 - **Language**: Move
 - **Network**: Aptos (testnet/mainnet)
 
+---
+
+## 🌐 Deployment
+
+### Frontend (Vercel)
+
+1. Connect GitHub repository to Vercel
+2. Set environment variables
+3. Deploy automatically on push
+
+**Live:** [https://trade-apt.vercel.app/](https://trade-apt.vercel.app/)
+
+### Backend (Render)
+
+1. Create new Web Service on Render
+2. Connect to repository, set root to `src/`
+3. Set environment variables
+4. Deploy
+
+**Live:** [https://trade-apt.onrender.com](https://trade-apt.onrender.com)
+
+---
+
 ## Important Notes
 
 ⚠️ **Trade simulation mode:**
@@ -393,6 +424,31 @@ The server starts a background worker that:
 - Always test on testnet first
 - No actual funds are at risk in simulation mode
 
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing`)
+5. Open Pull Request
+
+---
+
+## 🙏 Acknowledgments
+
+- [Aptos Labs](https://aptoslabs.com/) - Blockchain infrastructure
+- [Groq](https://groq.com/) - AI inference
+- [Vercel](https://vercel.com/) - Frontend hosting
+- [Render](https://render.com/) - Backend hosting
+
+---
+
 ## License
 
 MIT
+
+---
+
+**Built with ❤️ for the Aptos ecosystem**
