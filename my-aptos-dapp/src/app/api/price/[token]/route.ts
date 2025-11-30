@@ -25,7 +25,7 @@ async function loadMarkets() {
     const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/markets`, {
       headers: {
         'Content-Type': 'application/json',
-        'X-Wallet-Address': DECIBEL_API_WALLET || '',
+        'Authorization': `Bearer ${DECIBEL_API_WALLET}`,
       },
     });
     if (response.ok) {
@@ -59,7 +59,7 @@ async function loadPrices() {
     const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/prices`, {
       headers: {
         'Content-Type': 'application/json',
-        'X-Wallet-Address': DECIBEL_API_WALLET || '',
+        'Authorization': `Bearer ${DECIBEL_API_WALLET}`,
       },
       cache: 'no-store'
     });

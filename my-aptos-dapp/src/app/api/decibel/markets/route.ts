@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 
 const DECIBEL_BASE_URL = 'https://api.netna.aptoslabs.com/decibel';
-const DECIBEL_API_WALLET = process.env.DECIBEL_API_WALLET || '';
+const DECIBEL_API_KEY = process.env.DECIBEL_API_KEY || '';
 
 export interface DecibelMarket {
   market_addr: string;
@@ -36,7 +36,7 @@ export async function GET() {
     const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/markets`, {
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Wallet': DECIBEL_API_WALLET,
+        'Authorization': `Bearer ${DECIBEL_API_KEY}`,
       },
       next: { revalidate: 1800 } // Cache for 30 minutes
     });

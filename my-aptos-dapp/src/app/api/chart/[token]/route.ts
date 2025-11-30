@@ -26,7 +26,7 @@ async function getMarketAddress(symbol: string): Promise<string | null> {
     const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/markets`, {
       headers: {
         'Content-Type': 'application/json',
-        'X-Wallet-Address': DECIBEL_API_WALLET || '',
+        'Authorization': `Bearer ${DECIBEL_API_WALLET}`,
       },
     });
     if (!response.ok) return null;
@@ -90,7 +90,7 @@ export async function GET(
       {
         headers: {
           'Content-Type': 'application/json',
-          'X-Wallet-Address': DECIBEL_API_WALLET || '',
+          'Authorization': `Bearer ${DECIBEL_API_WALLET}`,
         },
         cache: 'no-store'
       }
