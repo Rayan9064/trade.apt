@@ -7,5 +7,13 @@ const withPWA = withPWAInit({
 // Your Next config is automatically typed!
 export default withPWA({
   reactStrictMode: true,
-  // No more API rewrites needed - using Next.js API routes
+  // Proxy API requests to Python backend for local development
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/:path*',
+      },
+    ];
+  },
 });

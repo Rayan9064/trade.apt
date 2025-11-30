@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const DECIBEL_BASE_URL = 'https://api.netna.aptoslabs.com/decibel';
-const DECIBEL_API_WALLET = process.env.DECIBEL_API_WALLET;
 
 // Cache
 let marketsCache: Record<string, string> = {};
@@ -22,12 +21,7 @@ async function loadMarkets() {
   }
 
   try {
-    const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/markets`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DECIBEL_API_WALLET}`,
-      },
-    });
+    const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/markets`);
     if (response.ok) {
       const markets = await response.json();
       marketsCache = {};
@@ -57,10 +51,6 @@ async function loadPrices() {
 
   try {
     const response = await fetch(`${DECIBEL_BASE_URL}/api/v1/prices`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DECIBEL_API_WALLET}`,
-      },
       cache: 'no-store'
     });
     if (response.ok) {
