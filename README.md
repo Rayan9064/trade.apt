@@ -1,32 +1,77 @@
-# Trade.apt - DeFi Trading Assistant Backend
+# Trade.apt - AI-Powered DeFi Trading Assistant
 
-A DeFi-style trading assistant backend built with FastAPI. This is a **simulation/demo** system - no actual blockchain transactions occur.
+A full-stack AI-powered DeFi trading assistant for the Aptos blockchain with natural language trading, real-time price streaming, and a modern dashboard UI.
 
 ## Features
 
-- 🤖 **AI-Powered Parsing**: Convert natural language trading instructions to structured JSON using OpenAI GPT-4o-mini
-- 💰 **Real-Time Prices**: Fetch live crypto prices from CoinGecko API
+### Backend (Python/FastAPI)
+- 🤖 **AI Trading Agent**: Natural language trading powered by Groq (llama-3.3-70b) or OpenAI GPT-4o-mini
+- 💰 **Real-Time Prices**: WebSocket streaming from Binance + REST from CoinGecko
 - 📊 **Trade Simulation**: Simulate buy/sell/swap trades with conditional execution
 - 🔔 **Price Alerts**: Set alerts that trigger when tokens reach target prices
 - ⏰ **Background Worker**: Continuously monitors prices for alerts and pending trades
+- 🔐 **Wallet Auth**: Aptos wallet-based authentication
+- 🗄️ **Database**: SQLite for users, sessions, trades, and audit logs
+
+### Frontend (Next.js/React)
+- 📈 **Interactive Charts**: Real-time price charts with Chart.js
+- 💬 **AI Chatbot**: Natural language trading assistant
+- 📱 **Responsive Dashboard**: Modern UI with Sidebar, Header, Ticker
+- 🎨 **Dark Theme**: Sleek dark mode design
+- 🔗 **Wallet Integration**: Aptos wallet connection via Petra/Pontem/etc.
+- ⚡ **Live Price Ticker**: SSE-powered real-time price updates
+
+### Smart Contracts (Move)
+- 🔄 **Swap Router**: Token swap functionality
+- 📊 **Price Oracle**: On-chain price feeds
+- 📢 **Events**: On-chain event emission
 
 ## Project Structure
 
 ```
 trade.apt/
-├── src/
+├── src/                           # Python Backend
 │   ├── ai/
-│   │   ├── __init__.py
-│   │   └── parser.py          # AI parsing with OpenAI
+│   │   ├── agent.py              # AI trading agent (Groq/OpenAI)
+│   │   └── parser.py             # Trade instruction parser
 │   ├── api/
-│   │   ├── __init__.py
-│   │   └── price.py           # CoinGecko price fetching
+│   │   ├── price.py              # CoinGecko price fetching
+│   │   ├── chart_data.py         # OHLC chart data
+│   │   └── websocket_price.py    # Binance WebSocket streaming
 │   ├── engine/
-│   │   ├── __init__.py
-│   │   ├── trade_engine.py    # Trade simulation logic
-│   │   └── alert_engine.py    # Alert system & background worker
-│   ├── __init__.py
-│   └── server.py              # FastAPI application
+│   │   ├── trade_engine.py       # Trade simulation logic
+│   │   └── alert_engine.py       # Alert system & background worker
+│   ├── database/
+│   │   └── models.py             # SQLite models (users, sessions, trades)
+│   ├── blockchain/
+│   │   └── aptos.py              # Aptos wallet verification & faucet
+│   └── server.py                 # FastAPI application (924 lines)
+├── my-aptos-dapp/                 # Next.js Frontend
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx          # Main dashboard
+│   │   │   ├── layout.tsx        # Root layout
+│   │   │   ├── login/page.tsx    # Login page
+│   │   │   └── wallet/page.tsx   # Wallet management
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx       # Navigation sidebar
+│   │   │   ├── Header.tsx        # Top header
+│   │   │   ├── Ticker.tsx        # Price ticker bar
+│   │   │   ├── Chatbot.tsx       # AI chatbot interface
+│   │   │   ├── ChartPanel.tsx    # Main chart panel
+│   │   │   ├── CoinChart.tsx     # Individual coin chart
+│   │   │   ├── WalletPanel.tsx   # Wallet info panel
+│   │   │   ├── LivePriceTicker.tsx # Live price component
+│   │   │   └── views/            # View components
+│   │   └── context/
+│   │       ├── PriceContext.tsx  # SSE price streaming
+│   │       └── AuthContext.tsx   # Wallet authentication
+│   └── contract/                  # Move Smart Contracts
+│       └── sources/
+│           ├── trade_apt.move
+│           ├── swap_router.move
+│           ├── price_oracle.move
+│           └── events.move
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -34,7 +79,7 @@ trade.apt/
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install Backend Dependencies
 
 ```bash
 # Create virtual environment (recommended)
@@ -45,31 +90,49 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### 2. Install Frontend Dependencies
+
+```bash
+cd my-aptos-dapp
+npm install
+```
+
+### 3. Configure Environment
 
 ```bash
 # Copy example env file
 cp .env.example .env
 
-# Edit .env and add your OpenAI API key
-# OPENAI_API_KEY=sk-your-key-here
+# Edit .env and add your API keys:
+# GROQ_API_KEY=your-groq-key (recommended - free tier available)
+# OPENAI_API_KEY=sk-your-key (alternative)
+# COINGECKO_API_KEY=your-key (optional, for higher rate limits)
 ```
 
-> **Note**: The server works without an OpenAI API key using a mock parser. For full AI capabilities, add your key.
+> **Note**: The server works without API keys using mock responses. For full AI capabilities, add your Groq or OpenAI key.
 
-### 3. Run the Server
+### 4. Run the Backend Server
 
 ```bash
-# Run with Python
-python -m src.server
-
-# Or use uvicorn directly
+# Run with uvicorn
 uvicorn src.server:app --reload --host 0.0.0.0 --port 8000
+
+# Or run with Python
+python -m src.server
 ```
 
-The server will start at `http://localhost:8000`
+The backend will start at `http://localhost:8000`
 
-### 4. View API Documentation
+### 5. Run the Frontend
+
+```bash
+cd my-aptos-dapp
+npm run dev
+```
+
+The frontend will start at `http://localhost:3000`
+
+### 6. View API Documentation
 
 Open your browser to:
 - Swagger UI: `http://localhost:8000/docs`
@@ -84,14 +147,17 @@ GET /
 GET /health
 ```
 
-### AI Parsing
+### AI Agent
 
 ```bash
+# Parse and respond to natural language trading requests
 POST /ai/parse
 Content-Type: application/json
 
 {
-    "text": "buy $20 APT if price drops to $7"
+    "text": "buy $20 APT if price drops to $7",
+    "wallet_address": "0x1234...",  # optional
+    "context": {}                    # optional market context
 }
 ```
 
@@ -99,6 +165,7 @@ Content-Type: application/json
 ```json
 {
     "success": true,
+    "response": "I'll set up a limit order to buy $20 worth of APT when the price drops to $7...",
     "parsed": {
         "action": "buy",
         "tokenFrom": "USDC",
@@ -109,8 +176,7 @@ Content-Type: application/json
             "operator": "<",
             "value": 7
         }
-    },
-    "original_text": "buy $20 APT if price drops to $7"
+    }
 }
 ```
 
@@ -282,10 +348,15 @@ curl -X POST http://localhost:8000/trade/execute \
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key for AI parsing | None (uses mock parser) |
+| `GROQ_API_KEY` | Groq API key for AI agent (recommended) | None |
+| `OPENAI_API_KEY` | OpenAI API key for AI (fallback) | None (uses mock) |
+| `COINGECKO_API_KEY` | CoinGecko API key for prices | None (uses free tier) |
+| `DATABASE_PATH` | SQLite database path | `./trade_apt.db` |
 | `HOST` | Server host | `0.0.0.0` |
 | `PORT` | Server port | `8000` |
 | `ALERT_CHECK_INTERVAL` | Background check interval (seconds) | `10` |
+| `NEXT_PUBLIC_API_URL` | Backend API URL for frontend | `http://localhost:8000` |
+| `NEXT_PUBLIC_APTOS_NETWORK` | Aptos network (mainnet/testnet) | `testnet` |
 
 ## Background Worker
 
@@ -295,14 +366,32 @@ The server starts a background worker that:
 - Prints to console when alerts trigger or trades execute
 - Automatically executes pending trades when conditions are met
 
+## Tech Stack
+
+### Backend
+- **Framework**: FastAPI with Uvicorn
+- **AI**: Groq (llama-3.3-70b-versatile) / OpenAI (GPT-4o-mini)
+- **Database**: SQLite with custom ORM
+- **WebSocket**: Binance real-time price streaming
+- **REST**: CoinGecko for price data
+
+### Frontend
+- **Framework**: Next.js 14.2 with App Router
+- **UI**: TailwindCSS 3.4, FontAwesome icons
+- **Charts**: Chart.js 4.4 with react-chartjs-2
+- **Wallet**: Aptos Wallet Adapter
+- **State**: React Context + SSE for real-time prices
+
+### Smart Contracts
+- **Language**: Move
+- **Network**: Aptos (testnet/mainnet)
+
 ## Important Notes
 
-⚠️ **This is a SIMULATION/DEMO system:**
-- No actual blockchain transactions occur
-- No real money or tokens are exchanged
-- No wallet connections
-- No smart contract interactions
-- Trade "execution" is purely simulated
+⚠️ **Trade simulation mode:**
+- Trades are simulated unless connected to Aptos mainnet
+- Always test on testnet first
+- No actual funds are at risk in simulation mode
 
 ## License
 

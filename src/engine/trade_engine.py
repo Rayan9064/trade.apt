@@ -5,16 +5,28 @@ This module handles trade simulation and execution logic.
 It evaluates trade conditions against current prices and returns
 simulated execution results.
 
+Features:
+- Price staleness protection (rejects if price moved too much)
+- Real-time price from WebSocket cache
+- Conditional order support
+
 Note: This is a SIMULATION only - no actual blockchain transactions occur.
 """
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from enum import Enum
 import uuid
 
 from src.api.price import get_token_price
+
+# Try to use real-time prices if available
+try:
+    from src.api.websocket_price import get_price_service
+    USE_REALTIME_PRICES = True
+except ImportError:
+    USE_REALTIME_PRICES = False
 
 
 class TradeStatus(str, Enum):
@@ -22,6 +34,7 @@ class TradeStatus(str, Enum):
     EXECUTED = "executed"
     PENDING = "pending"
     FAILED = "failed"
+    REJECTED_STALE_PRICE = "rejected_stale_price"
 
 
 class TradeCondition(BaseModel):
@@ -38,6 +51,14 @@ class TradeRequest(BaseModel):
     tokenTo: str
     amountUsd: float
     conditions: TradeCondition
+    expectedPrice: Optional[float] = None  # Price user saw when making request
+    maxSlippagePercent: Optional[float] = 2.0  # Max allowed price deviation
+    
+    @validator('amountUsd')
+    def amount_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('Amount must be positive')
+        return v
 
 
 class TradeResult(BaseModel):
@@ -49,6 +70,8 @@ class TradeResult(BaseModel):
     tokenTo: str
     amountUsd: float
     executedPrice: Optional[float] = None
+    expectedPrice: Optional[float] = None
+    priceDeviation: Optional[float] = None  # Percentage price moved
     tokensReceived: Optional[float] = None
     timestamp: datetime
     reason: Optional[str] = None
@@ -56,6 +79,42 @@ class TradeResult(BaseModel):
 
 # In-memory storage for pending trades
 pending_trades: dict[str, TradeRequest] = {}
+
+
+async def get_current_price(token: str) -> Optional[float]:
+    """Get current price, preferring real-time WebSocket cache."""
+    if USE_REALTIME_PRICES:
+        service = get_price_service()
+        price = service.get_price(token)
+        if price is not None:
+            return price
+    # Fallback to REST API
+    return await get_token_price(token)
+
+
+def check_price_staleness(
+    expected_price: Optional[float], 
+    current_price: float, 
+    max_slippage: float = 2.0
+) -> tuple[bool, float]:
+    """
+    Check if price has moved too much since user made the request.
+    
+    Args:
+        expected_price: Price user saw when making request
+        current_price: Current market price
+        max_slippage: Maximum allowed deviation in percent (default 2%)
+    
+    Returns:
+        (is_valid, deviation_percent)
+    """
+    if expected_price is None:
+        return True, 0.0
+    
+    deviation = ((current_price - expected_price) / expected_price) * 100
+    is_valid = abs(deviation) <= max_slippage
+    
+    return is_valid, deviation
 
 
 def evaluate_condition(condition: TradeCondition, current_price: float) -> bool:
@@ -101,9 +160,12 @@ async def execute_trade(trade: TradeRequest) -> TradeResult:
     """
     Attempt to execute a trade based on current market conditions.
     
+    Features:
+    - Price staleness protection: rejects if price moved more than maxSlippagePercent
+    - Uses real-time WebSocket prices when available
+    - Supports conditional orders (price triggers)
+    
     This is a SIMULATION - no actual blockchain transaction occurs.
-    The function checks if trade conditions are met and returns
-    a simulated execution result.
     
     Args:
         trade: Trade request with action, tokens, amount, and conditions
@@ -115,9 +177,6 @@ async def execute_trade(trade: TradeRequest) -> TradeResult:
     timestamp = datetime.utcnow()
     
     # Determine which token price to check for condition
-    # For buy: check the token we're buying (tokenTo)
-    # For sell: check the token we're selling (tokenFrom)
-    # For swap: check the tokenTo price
     if trade.action == "buy":
         price_check_token = trade.tokenTo
     elif trade.action == "sell":
@@ -125,8 +184,8 @@ async def execute_trade(trade: TradeRequest) -> TradeResult:
     else:  # swap
         price_check_token = trade.tokenTo
     
-    # Fetch current price
-    current_price = await get_token_price(price_check_token)
+    # Fetch current price (prefer real-time WebSocket)
+    current_price = await get_current_price(price_check_token)
     
     if current_price is None:
         return TradeResult(
@@ -139,6 +198,36 @@ async def execute_trade(trade: TradeRequest) -> TradeResult:
             timestamp=timestamp,
             reason=f"Failed to fetch price for {price_check_token}"
         )
+    
+    # ==========================================
+    # PRICE STALENESS PROTECTION
+    # ==========================================
+    # If user provided expected price, check if it's still valid
+    if trade.expectedPrice is not None:
+        max_slippage = trade.maxSlippagePercent or 2.0
+        is_valid, deviation = check_price_staleness(
+            trade.expectedPrice, 
+            current_price, 
+            max_slippage
+        )
+        
+        if not is_valid:
+            direction = "increased" if deviation > 0 else "decreased"
+            return TradeResult(
+                trade_id=trade_id,
+                status=TradeStatus.REJECTED_STALE_PRICE,
+                action=trade.action,
+                tokenFrom=trade.tokenFrom,
+                tokenTo=trade.tokenTo,
+                amountUsd=trade.amountUsd,
+                executedPrice=current_price,
+                expectedPrice=trade.expectedPrice,
+                priceDeviation=round(deviation, 2),
+                timestamp=timestamp,
+                reason=f"⚠️ Price {direction} by {abs(deviation):.2f}% since your request. "
+                       f"Expected ${trade.expectedPrice:.2f}, now ${current_price:.2f}. "
+                       f"Please review and try again."
+            )
     
     # Evaluate trade condition
     condition_met = evaluate_condition(trade.conditions, current_price)
@@ -153,6 +242,11 @@ async def execute_trade(trade: TradeRequest) -> TradeResult:
         else:  # swap
             tokens_received = trade.amountUsd / current_price
         
+        # Calculate actual deviation if expected price was provided
+        deviation = None
+        if trade.expectedPrice:
+            _, deviation = check_price_staleness(trade.expectedPrice, current_price, 100)
+        
         return TradeResult(
             trade_id=trade_id,
             status=TradeStatus.EXECUTED,
@@ -161,6 +255,8 @@ async def execute_trade(trade: TradeRequest) -> TradeResult:
             tokenTo=trade.tokenTo,
             amountUsd=trade.amountUsd,
             executedPrice=current_price,
+            expectedPrice=trade.expectedPrice,
+            priceDeviation=round(deviation, 2) if deviation else None,
             tokensReceived=round(tokens_received, 8),
             timestamp=timestamp,
             reason=None
