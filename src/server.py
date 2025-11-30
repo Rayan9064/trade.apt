@@ -53,6 +53,14 @@ from src.api.websocket_price import (
     PriceData,
 )
 from src.api.chart_data import get_chart_data
+from src.api.decibel import (
+    get_markets as get_decibel_markets,
+    get_prices as get_decibel_prices,
+    get_price_by_symbol as get_decibel_price,
+    get_candlesticks,
+    get_available_symbols as get_decibel_symbols,
+    CandlestickInterval,
+)
 from src.engine.trade_engine import (
     TradeRequest,
     TradeCondition,
@@ -529,6 +537,8 @@ async def get_supported_tokens_endpoint():
 async def get_chart_data_endpoint(token: str, days: int = 7):
     """
     Get historical OHLC chart data for a token.
+    Primary source: Decibel.trade API (real-time on-chain data)
+    Fallback: CoinGecko API
     
     Args:
         token: Token symbol (e.g., BTC, ETH, APT)
@@ -565,18 +575,153 @@ async def get_simple_chart_data_endpoint(token: str, days: int = 7):
             detail=f"Chart data not found for {token}"
         )
     
-    # Extract just closing prices for simple charts
+    # Handle both Decibel and CoinGecko formats
+    prices = chart_data.get("prices", [])
+    if prices:
+        price_values = [p.get("value", p.get("close", 0)) for p in prices]
+        timestamps = [p.get("time", 0) for p in prices]
+    else:
+        price_values = []
+        timestamps = []
+    
     return {
-        "token": chart_data["token"],
+        "token": chart_data.get("symbol", token.upper()),
         "days": days,
-        "prices": chart_data["close"],
-        "timestamps": chart_data["timestamps"],
-        "current_price": chart_data["close"][-1] if chart_data["close"] else None,
+        "prices": price_values,
+        "timestamps": timestamps,
+        "current_price": price_values[-1] if price_values else None,
         "price_change_percent": (
-            ((chart_data["close"][-1] - chart_data["close"][0]) / chart_data["close"][0] * 100)
-            if chart_data["close"] and len(chart_data["close"]) > 1
+            ((price_values[-1] - price_values[0]) / price_values[0] * 100)
+            if price_values and len(price_values) > 1 and price_values[0] != 0
             else 0
+        ),
+        "source": chart_data.get("source", "unknown")
+    }
+
+
+# ----------------------------------------------------------------------------
+# Decibel Markets Endpoints
+# ----------------------------------------------------------------------------
+
+@app.get("/decibel/markets")
+async def get_decibel_markets_endpoint():
+    """
+    Get all available Decibel perpetual markets.
+    
+    Returns:
+        List of markets with their addresses and configuration
+    """
+    markets = await get_decibel_markets()
+    return {
+        "count": len(markets),
+        "markets": [
+            {
+                "symbol": m.symbol,
+                "market_name": m.market_name,
+                "market_addr": m.market_addr,
+                "max_leverage": m.max_leverage,
+                "tick_size": m.tick_size,
+                "px_decimals": m.px_decimals,
+                "sz_decimals": m.sz_decimals
+            }
+            for m in markets.values()
+        ]
+    }
+
+
+@app.get("/decibel/prices")
+async def get_decibel_prices_endpoint():
+    """
+    Get current prices for all Decibel markets.
+    
+    Returns:
+        List of prices with mark price, oracle price, funding rate, etc.
+    """
+    prices = await get_decibel_prices()
+    markets = await get_decibel_markets()
+    
+    # Create a map of market address to symbol
+    addr_to_symbol = {m.market_addr: m.symbol for m in markets.values()}
+    
+    return {
+        "count": len(prices),
+        "prices": [
+            {
+                "market": p.market,
+                "symbol": addr_to_symbol.get(p.market, "UNKNOWN"),
+                "mark_px": p.mark_px,
+                "mid_px": p.mid_px,
+                "oracle_px": p.oracle_px,
+                "funding_rate_bps": p.funding_rate_bps,
+                "is_funding_positive": p.is_funding_positive,
+                "open_interest": p.open_interest,
+                "timestamp_ms": p.timestamp_ms
+            }
+            for p in prices
+        ]
+    }
+
+
+@app.get("/decibel/symbols")
+async def get_decibel_symbols_endpoint():
+    """
+    Get list of available trading symbols on Decibel.
+    
+    Returns:
+        List of symbols (e.g., ["BTC", "ETH", "SOL", ...])
+    """
+    symbols = await get_decibel_symbols()
+    return {
+        "count": len(symbols),
+        "symbols": symbols
+    }
+
+
+@app.get("/decibel/candlesticks/{symbol}")
+async def get_decibel_candlesticks_endpoint(
+    symbol: str,
+    interval: str = "1h",
+    days: int = 7
+):
+    """
+    Get candlestick data directly from Decibel API.
+    
+    Args:
+        symbol: Token symbol (e.g., BTC, ETH, APT)
+        interval: Candlestick interval (1m, 5m, 15m, 30m, 1h, 2h, 4h, 1d, 1w)
+        days: Number of days of data
+    
+    Returns:
+        OHLCV candlestick data
+    """
+    try:
+        interval_enum = CandlestickInterval(interval)
+    except ValueError:
+        interval_enum = CandlestickInterval.ONE_HOUR
+    
+    candles = await get_candlesticks(symbol, interval_enum, days=days)
+    
+    if not candles:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Candlestick data not found for {symbol}"
         )
+    
+    return {
+        "symbol": symbol.upper(),
+        "interval": interval,
+        "count": len(candles),
+        "candles": [
+            {
+                "time": c.timestamp,
+                "open": c.open,
+                "high": c.high,
+                "low": c.low,
+                "close": c.close,
+                "volume": c.volume
+            }
+            for c in candles
+        ]
     }
 
 

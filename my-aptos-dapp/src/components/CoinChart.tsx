@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -36,6 +36,15 @@ interface PricePoint {
   value: number;
 }
 
+interface OHLCVPoint {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 interface ChartStats {
   current: number;
   open: number;
@@ -49,9 +58,13 @@ interface ChartStats {
 interface ChartData {
   symbol: string;
   prices: PricePoint[];
+  ohlcv?: OHLCVPoint[];
   stats: ChartStats | null;
   days: number;
+  interval?: string;
   data_points: number;
+  source?: string;
+  last_updated?: string;
 }
 
 interface CoinChartProps {
@@ -72,32 +85,48 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState(7);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chart/${symbol}?days=${timeframe}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch chart data for ${symbol}`);
+      }
+
+      const data: ChartData = await response.json();
+      setChartData(data);
+      setLastUpdateTime(new Date());
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load chart');
+    }
+  }, [symbol, timeframe]);
 
   useEffect(() => {
-    const fetchChartData = async () => {
+    const loadData = async () => {
       setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/chart/${symbol}?days=${timeframe}`
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch chart data for ${symbol}`);
-        }
-
-        const data: ChartData = await response.json();
-        setChartData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load chart');
-      } finally {
-        setLoading(false);
-      }
+      await fetchChartData();
+      setLoading(false);
     };
 
-    fetchChartData();
-  }, [symbol, timeframe]);
+    loadData();
+
+    // Set up auto-refresh every 30 seconds for real-time updates
+    refreshIntervalRef.current = setInterval(() => {
+      fetchChartData();
+    }, 30000);
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [fetchChartData]);
 
   const formatPrice = (price: number) => {
     if (price >= 1000) {
@@ -110,6 +139,7 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
 
   const stats = chartData?.stats;
   const isPositive = stats ? stats.change_percent >= 0 : true;
+  const dataSource = chartData?.source || 'unknown';
 
   const chartOptions = {
     responsive: true,
@@ -208,6 +238,24 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
     };
   };
 
+  const getSourceBadge = () => {
+    if (dataSource === 'decibel') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+          Decibel Live
+        </span>
+      );
+    } else if (dataSource === 'coingecko') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30">
+          CoinGecko
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden h-full flex flex-col">
       {/* Header */}
@@ -217,7 +265,10 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
             {symbol.charAt(0)}
           </div>
           <div>
-            <h3 className="text-white font-semibold text-lg">{symbol}/USD</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-white font-semibold text-lg">{symbol}/USD</h3>
+              {getSourceBadge()}
+            </div>
             {stats && (
               <div className="flex items-center gap-2">
                 <span className="text-white text-xl font-bold">
@@ -235,31 +286,45 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
             )}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {lastUpdateTime && (
+            <span className="text-xs text-gray-500">
+              Updated {lastUpdateTime.toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-gray-800"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Timeframe Selector */}
-      <div className="flex gap-1 p-3 border-b border-gray-800">
-        {timeframeOptions.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => setTimeframe(option.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              timeframe === option.value
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between p-3 border-b border-gray-800">
+        <div className="flex gap-1">
+          {timeframeOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setTimeframe(option.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                timeframe === option.value
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {chartData?.interval && (
+          <span className="text-xs text-gray-500">
+            Interval: {chartData.interval}
+          </span>
+        )}
       </div>
 
       {/* Chart Area */}
@@ -268,7 +333,7 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
           <div className="h-full flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-gray-400 text-sm">Loading chart...</span>
+              <span className="text-gray-400 text-sm">Loading chart data from Decibel...</span>
             </div>
           </div>
         ) : error ? (
@@ -277,7 +342,10 @@ const CoinChart: React.FC<CoinChartProps> = ({ symbol, onClose }) => {
               <div className="text-red-400 text-4xl mb-3">📊</div>
               <p className="text-gray-400">{error}</p>
               <button
-                onClick={() => setTimeframe(timeframe)}
+                onClick={() => {
+                  setLoading(true);
+                  fetchChartData().finally(() => setLoading(false));
+                }}
                 className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
               >
                 Retry
