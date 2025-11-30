@@ -8,6 +8,10 @@ An AI-powered trading assistant for the Aptos blockchain with natural language c
 
 **📜 Contract Address:** `0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea`
 
+**📜 Find the Contracts on:** `https://explorer.aptoslabs.com/account/0xf522b301773ca60d8e70f1e258708cbf0735eb6e38f22158563ad92c19c349ea/modules/code/events?network=testnet`
+
+
+
 ---
 
 ## ✨ Features
